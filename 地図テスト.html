@@ -1,0 +1,186 @@
+<title>保育園マップ試作</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<style>
+/* レイアウト：上に説明と切り替え、中央に指でスクロールできる地図、下にタップした園の情報 */
+:root{
+  --bg:#f6f8fb; --surface:#ffffff; --fg:#1b2533; --muted:#5d6b7e; --line:#dbe2ec;
+  --accent:#1c5cab; --hit:#104281; --fill:#86b6ef; --none:#9aa6b5; --ring:#ffffff;
+  --map-bg:#e9edf2; --warn:#8a5a00; --warn-bg:#fff4dc;
+  --font:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Noto Sans JP","Noto Sans CJK JP",Meiryo,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151d; --surface:#18202b; --fg:#e6ecf4; --muted:#9aa8ba; --line:#2b3644;
+  --accent:#7fb0f0; --hit:#5b9cf0; --fill:#2f5f9a; --none:#6b7686; --ring:#10151d;
+  --map-bg:#1d2530; --warn:#f0c46a; --warn-bg:#3a2f15; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151d; --surface:#18202b; --fg:#e6ecf4; --muted:#9aa8ba; --line:#2b3644;
+  --accent:#7fb0f0; --hit:#5b9cf0; --fill:#2f5f9a; --none:#6b7686; --ring:#10151d;
+  --map-bg:#1d2530; --warn:#f0c46a; --warn-bg:#3a2f15; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+.wrap{max-width:760px;margin:0 auto;display:grid;gap:12px}
+.eyebrow{font-size:12px;color:var(--warn);background:var(--warn-bg);display:inline-block;padding:2px 8px;border-radius:4px}
+h1{font-size:21px;margin:6px 0 2px}
+.lead{color:var(--muted);font-size:13.5px;margin:0}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.seg{display:inline-grid;grid-auto-flow:column;background:var(--line);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--fg);font:inherit;font-weight:600;font-size:14px;padding:7px 12px;border-radius:8px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.zoom{display:inline-flex;gap:6px}
+.zoom button{width:38px;height:38px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:20px;border-radius:8px;cursor:pointer}
+.zoom button:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.mapbox{position:relative;height:min(62vh,520px);overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--map-bg);
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.plane{position:relative}
+.plane img{position:absolute;width:256px;height:256px;display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.dot{position:absolute;transform:translate(-50%,-50%);border-radius:50%;border:2px solid var(--ring);padding:0;cursor:pointer;
+  box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.dot.hit{background:var(--hit)} .dot.fill{background:var(--fill)} .dot.none{background:var(--none)}
+.dot.none{border-radius:3px} /* 空きなし＝四角（色だけに頼らない） */
+.dot[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:2px}
+.dot span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-size:11px;font-weight:700;pointer-events:none}
+.notice{position:sticky;left:0;top:0;z-index:5;display:none;margin:0;padding:6px 10px;font-size:12px;background:var(--warn-bg);color:var(--warn)}
+.attr{font-size:11.5px;color:var(--muted);text-align:right}
+.attr a{color:var(--muted)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1.5px solid var(--ring);box-shadow:0 0 0 1px var(--line)}
+.legend i.sq{border-radius:2px}
+.info{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-height:72px}
+.info h2{font-size:16px;margin:0}
+.info p{margin:4px 0 0;font-size:13.5px;color:var(--muted)}
+.info .nums{color:var(--fg);font-variant-numeric:tabular-nums}
+</style>
+
+<div class="wrap">
+  <div>
+    <span class="eyebrow">地図の表示テスト（園と数字はすべてダミー）</span>
+    <h1>保育園マップ（試作）</h1>
+    <p class="lead">指で地図を動かし、点をタップすると情報が出ます。点の大きさ＝4月の空き（欠員）、色と形＝年度途中の判定。</p>
+  </div>
+  <div class="bar">
+    <div class="seg" id="age" role="group" aria-label="クラス">
+      <button type="button" data-age="0" aria-pressed="true">0歳児</button>
+      <button type="button" data-age="1" aria-pressed="false">1歳児</button>
+      <button type="button" data-age="2" aria-pressed="false">2歳児</button>
+    </div>
+    <div class="zoom">
+      <button type="button" id="zout" aria-label="縮小">−</button>
+      <button type="button" id="zin" aria-label="拡大">＋</button>
+    </div>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--hit)"></i>空きが続いた</span>
+    <span><i style="background:var(--fill)"></i>途中で埋まった</span>
+    <span><i class="sq" style="background:var(--none)"></i>空きなし</span>
+  </div>
+  <div class="mapbox" id="mapbox" aria-label="地図">
+    <p class="notice" id="notice">背景の地図を読み込めませんでした（この画面では外部の画像が禁止されています）。点の位置と操作だけ確認できます。</p>
+    <div class="plane" id="plane"></div>
+  </div>
+  <div class="attr">背景地図：<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">地理院タイル（淡色地図）</a></div>
+  <div class="info" id="info" aria-live="polite"><p>点をタップすると、ここに園の情報が出ます。</p></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // ---- ダミーの園（文京区内のだいたいの位置。実在の園ではない） ----
+  // v: [0歳,1歳,2歳] の [4月の欠員, 判定]  判定 h=空きが続いた f=途中で埋まった n=空きなし
+  var SITES = [
+    {n:"ダミー園A", lat:35.7078, lon:139.7520, v:[[3,"h"],[0,"n"],[2,"f"]]},
+    {n:"ダミー園B", lat:35.7125, lon:139.7395, v:[[1,"f"],[1,"h"],[0,"n"]]},
+    {n:"ダミー園C", lat:35.7178, lon:139.7298, v:[[0,"n"],[0,"n"],[4,"h"]]},
+    {n:"ダミー園D", lat:35.7215, lon:139.7465, v:[[6,"h"],[2,"f"],[1,"f"]]},
+    {n:"ダミー園E", lat:35.7262, lon:139.7560, v:[[2,"f"],[0,"n"],[0,"n"]]},
+    {n:"ダミー園F", lat:35.7310, lon:139.7448, v:[[0,"n"],[3,"h"],[2,"h"]]},
+    {n:"ダミー園G", lat:35.7275, lon:139.7680, v:[[4,"h"],[1,"f"],[0,"n"]]},
+    {n:"ダミー園H", lat:35.7192, lon:139.7640, v:[[1,"f"],[0,"n"],[3,"h"]]},
+    {n:"ダミー園I", lat:35.7090, lon:139.7632, v:[[0,"n"],[0,"n"],[1,"f"]]},
+    {n:"ダミー園J", lat:35.7035, lon:139.7585, v:[[2,"h"],[1,"h"],[0,"n"]]},
+    {n:"ダミー園K", lat:35.7150, lon:139.7550, v:[[8,"f"],[4,"h"],[2,"f"]]},
+    {n:"ダミー園L", lat:35.7232, lon:139.7340, v:[[0,"n"],[2,"f"],[5,"h"]]}
+  ];
+  var JL = {h:"空きが続いた", f:"途中で埋まった", n:"空きなし"};
+  var JC = {h:"hit", f:"fill", n:"none"};
+  var BOX = {n:35.738, s:35.698, w:139.724, e:139.776}; // 表示する範囲（文京区のまわり）
+  var Z_MIN = 14, Z_MAX = 17;
+  var state = {z:15, age:0, sel:-1};
+
+  var mapbox = document.getElementById("mapbox"), plane = document.getElementById("plane");
+  var notice = document.getElementById("notice"), info = document.getElementById("info");
+
+  // 緯度経度 → 地図上の位置（Webメルカトル。地図タイルと同じ計算）
+  function px(lat, lon, z){
+    var n = Math.pow(2, z) * 256, r = lat * Math.PI / 180;
+    return {x:(lon + 180) / 360 * n, y:(1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n};
+  }
+  function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=String(text); return e; }
+
+  var tileFailed = false;
+  function render(keepCenter){
+    var z = state.z;
+    // 中心を保ったまま拡大縮小するため、いまの中心を緯度経度の割合で覚えておく
+    var cx = 0.5, cy = 0.5;
+    if (keepCenter && plane.offsetWidth){
+      cx = (mapbox.scrollLeft + mapbox.clientWidth/2) / plane.offsetWidth;
+      cy = (mapbox.scrollTop + mapbox.clientHeight/2) / plane.offsetHeight;
+    }
+    var nw = px(BOX.n, BOX.w, z), se = px(BOX.s, BOX.e, z);
+    var tx0 = Math.floor(nw.x/256), ty0 = Math.floor(nw.y/256), tx1 = Math.floor(se.x/256), ty1 = Math.floor(se.y/256);
+    var ox = tx0*256, oy = ty0*256;
+    plane.replaceChildren();
+    plane.style.width = (tx1-tx0+1)*256 + "px";
+    plane.style.height = (ty1-ty0+1)*256 + "px";
+    for (var ty=ty0; ty<=ty1; ty++) for (var tx=tx0; tx<=tx1; tx++){
+      var img = new Image();
+      img.alt = ""; img.decoding = "async"; img.loading = "lazy";
+      img.referrerPolicy = "no-referrer";
+      img.style.left = (tx*256-ox) + "px"; img.style.top = (ty*256-oy) + "px";
+      img.onerror = function(){ this.style.visibility = "hidden"; if(!tileFailed){ tileFailed = true; notice.style.display = "block"; } };
+      img.src = "https://cyberjapandata.gsi.go.jp/xyz/pale/" + z + "/" + tx + "/" + ty + ".png";
+      plane.appendChild(img);
+    }
+    var scale = Math.pow(2, z-15); // 拡大するほど点も少し大きく
+    SITES.forEach(function(s, i){
+      var p = px(s.lat, s.lon, z), v = s.v[state.age];
+      var d = Math.round((14 + Math.sqrt(v[0]) * 9) * Math.min(1.4, Math.max(0.8, scale)));
+      var b = el("button", "dot " + JC[v[1]]);
+      b.type = "button";
+      b.style.left = (p.x-ox) + "px"; b.style.top = (p.y-oy) + "px";
+      b.style.width = d + "px"; b.style.height = d + "px";
+      b.setAttribute("aria-label", s.n + "　4月の空き" + v[0] + "人　" + JL[v[1]]);
+      b.setAttribute("aria-pressed", String(i === state.sel));
+      if (v[0] > 0 && d >= 20) b.appendChild(el("span", null, v[0]));
+      b.addEventListener("click", function(){ state.sel = i; showInfo(); plane.querySelectorAll(".dot").forEach(function(x){ x.setAttribute("aria-pressed", String(x===b)); }); });
+      plane.appendChild(b);
+    });
+    mapbox.scrollLeft = cx * plane.offsetWidth - mapbox.clientWidth/2;
+    mapbox.scrollTop = cy * plane.offsetHeight - mapbox.clientHeight/2;
+    document.getElementById("zin").disabled = z >= Z_MAX;
+    document.getElementById("zout").disabled = z <= Z_MIN;
+  }
+  function showInfo(){
+    info.replaceChildren();
+    if (state.sel < 0){ info.appendChild(el("p", null, "点をタップすると、ここに園の情報が出ます。")); return; }
+    var s = SITES[state.sel], v = s.v[state.age];
+    info.appendChild(el("h2", null, s.n + "（" + state.age + "歳児クラス）"));
+    var p = el("p", "nums", "4月の空き " + v[0] + "人　／　" + JL[v[1]]);
+    info.appendChild(p);
+    info.appendChild(el("p", null, "本番では、ここに3年分の数字と「くわしく」を表示します。"));
+  }
+  document.getElementById("age").addEventListener("click", function(ev){
+    var b = ev.target.closest("button"); if(!b) return;
+    state.age = Number(b.dataset.age);
+    this.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", String(x===b)); });
+    render(true); showInfo();
+  });
+  document.getElementById("zin").addEventListener("click", function(){ if(state.z<Z_MAX){ state.z++; render(true); } });
+  document.getElementById("zout").addEventListener("click", function(){ if(state.z>Z_MIN){ state.z--; render(true); } });
+  render(false);
+})();
+</script>
