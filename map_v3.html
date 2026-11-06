@@ -96,7 +96,8 @@ h1{font-size:20px;margin:6px 0 2px}
       <p class="label">地図の記号と文字（比較用）</p>
       <div class="chips" id="lv" role="group" aria-label="地図の記号と文字">
         <button type="button" class="chip" data-lv="all" aria-pressed="false">すべて表示</button>
-        <button type="button" class="chip" data-lv="noicon" aria-pressed="true">記号を消す</button>
+        <button type="button" class="chip" data-lv="faint" aria-pressed="false">すべて（薄め）</button>
+        <button type="button" class="chip" data-lv="noicon" aria-pressed="true">記号を消す（文字は残す）</button>
         <button type="button" class="chip" data-lv="none" aria-pressed="false">文字も消す</button>
       </div>
     </div>
@@ -148,7 +149,10 @@ h1{font-size:20px;margin:6px 0 2px}
       return {type:"Feature", properties:{name:a, color:AREA_COLOR[a]||"#888"}, geometry:{type:"Polygon", coordinates:D.areas[a]}}; })},
     sites: {type:"FeatureCollection", features:D.sites.map(function(s, i){
       var p = {idx:i, area:s.a};
-      s.v.forEach(function(yr, y){ yr.forEach(function(v, a){ p["k"+y+a] = v[1] + "-" + Math.min(v[0], 99); }); });
+      s.v.forEach(function(yr, y){ yr.forEach(function(v, a){
+        p["k"+y+a] = v[1] + "-" + Math.min(v[0], 99);  // 点の画像の名前（判定-人数）
+        p["r"+y+a] = v[0];                             // 重ね順用の空き人数
+      }); });
       return {type:"Feature", properties:p, geometry:{type:"Point", coordinates:[s.lon, s.lat]}}; })}
   };
 
@@ -230,13 +234,25 @@ h1{font-size:20px;margin:6px 0 2px}
     }).catch(function(e){ showErr("新しい地理院の地図を読み込めませんでした：" + e.message); });
   }
   var STATION = /station|rail|transit|駅|鉄道/i;
+  // 背景の文字・記号の元の濃さ（背景を読み込むたびに覚え直す）
+  var orig = {};
+  function rememberOrig(){
+    orig = {};
+    (map.getStyle().layers || []).forEach(function(l){
+      if (l.type !== "symbol" || /^ov-/.test(l.id)) return;
+      var p = l.paint || {};
+      orig[l.id] = {io: "icon-opacity" in p ? p["icon-opacity"] : 1, to: "text-opacity" in p ? p["text-opacity"] : 1};
+    });
+  }
   function applyLabels(){
     var st = map.getStyle(); if (!st || !st.layers) return;
     st.layers.forEach(function(l){
-      if (l.type !== "symbol" || /^ov-/.test(l.id)) return;
-      var hasIcon = !!(l.layout && l.layout["icon-image"]);
-      var show = state.lv === "all" || (state.lv === "noicon" && !hasIcon);
-      map.setLayoutProperty(l.id, "visibility", show ? "visible" : "none");
+      if (l.type !== "symbol" || /^ov-/.test(l.id) || !orig[l.id]) return;
+      var o = orig[l.id], lv = state.lv;
+      map.setLayoutProperty(l.id, "visibility", lv === "none" ? "none" : "visible");
+      // 記号を消す＝記号だけ透明にして、大学名などの文字は残す／薄め＝記号も文字も薄く
+      map.setPaintProperty(l.id, "icon-opacity", lv === "noicon" ? 0 : (lv === "faint" ? 0.35 : o.io));
+      map.setPaintProperty(l.id, "text-opacity", lv === "faint" ? 0.55 : o.to);
       if (state.bg === "ofm" && l.layout && l.layout["text-field"] && l.source === "openmaptiles") {
         map.setLayoutProperty(l.id, "text-field", ["coalesce", ["get","name:ja"], ["get","name"]]);
       }
@@ -264,10 +280,10 @@ h1{font-size:20px;margin:6px 0 2px}
     map.setPaintProperty("ov-area-fill", "fill-opacity", sel ? ["case",["==",["get","name"],sel],0.12,0.28] : 0.28);
     map.setLayoutProperty("ov-dots", "icon-image", ["get", key]);
     // 空きの多い点を上に描く
-    map.setLayoutProperty("ov-dots", "symbol-sort-key", ["to-number", ["at", 1, ["split", ["get", key], "-"]]]);
+    map.setLayoutProperty("ov-dots", "symbol-sort-key", ["get", "r" + state.year + state.age]);
     map.setPaintProperty("ov-dots", "icon-opacity", sel ? ["case",["==",["get","area"],sel],1,0.3] : 1);
   }
-  map.on("style.load", function(){ addOverlays(); applyLabels(); });
+  map.on("style.load", function(){ rememberOrig(); addOverlays(); applyLabels(); });
 
   // ---- タップ（点の周り少し広めに反応） ----
   map.on("click", function(e){
