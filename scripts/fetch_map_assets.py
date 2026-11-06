@@ -4,7 +4,7 @@
   map/style/std.json   … 地理院の見た目の設定（記号・文字・地図データの場所を自前の場所に書き換え）
   map/sprite/          … 記号の画像
   map/glyphs/          … 文字の形（英数字・記号など。漢字・かなは端末のフォントで描くので取得しない）
-  map/lib/             … MapLibre GL と PMTiles の部品（版を固定）
+  map/lib/             … MapLibre GL の部品（版を固定）
   map/取得記録.json     … いつ・どこから取得したか
 """
 import json, os, sys, urllib.parse, urllib.request
@@ -14,7 +14,6 @@ STYLE_URL = "https://gsi-cyberjapan.github.io/optimal_bvmap/style/std.json"
 LIBS = {
     "maplibre-gl.js": "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js",
     "maplibre-gl.css": "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css",
-    "pmtiles.js": "https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js",
 }
 # 文字の形の範囲：基本の英数字、ラテン文字の追加、一般の記号、和文の記号（「」・々など）、全角英数字
 GLYPH_RANGES = ["0-255", "256-511", "8192-8447", "12288-12543", "65280-65535"]
@@ -70,16 +69,16 @@ def main(out):
                     print(f"取得できず {url}: {e}"); log["取得できなかったもの"].append(url)
         style["glyphs"] = "../glyphs/{fontstack}/{range}.pbf"
 
-    # 地図データの場所：地理院のPMTilesを、切り出した map/bunkyo.pmtiles に向ける
+    # 地図データの場所：地理院のPMTilesを、区画ごとに分けた map/tiles に向ける
     for k, src in style.get("sources", {}).items():
         where = json.dumps(src)
         if "optimal_bvmap" in where and src.get("type") == "vector":
-            # 場所（url / tiles）だけ自前に替え、ほかの設定（tileSize・ズームの範囲など）は元のまま残す
+            # 場所だけ自前の区画ファイル（map/tiles/z/x/y.pbf）に替え、ほかの設定は元のまま残す。
+            # 切り出した範囲（bounds）の外の区画は取りに行かない
             new = dict(src)
-            if "url" in new:
-                new["url"] = "pmtiles://LOCAL/bunkyo.pmtiles"
-            if "tiles" in new:
-                new["tiles"] = ["pmtiles://LOCAL/bunkyo.pmtiles/{z}/{x}/{y}"]
+            new.pop("url", None)
+            new["tiles"] = ["LOCAL_TILES/{z}/{x}/{y}.pbf"]
+            new["bounds"] = [139.695, 35.685, 139.795, 35.750]
             style["sources"][k] = new
             print(f"地図データの場所を自前に変更：{k}（元の設定 {where[:300]}）")
         else:
