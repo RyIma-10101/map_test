@@ -1,16 +1,13 @@
 {
- "取得日時": "2026-11-06T10:27:37.935517+00:00",
+ "取得日時": "2026-11-06T11:32:32.971921+00:00",
  "見た目の設定": "https://gsi-cyberjapan.github.io/optimal_bvmap/style/std.json",
  "取得したもの": [
   "https://gsi-cyberjapan.github.io/optimal_bvmap/sprite/std.json",
   "https://gsi-cyberjapan.github.io/optimal_bvmap/sprite/std.png",
   "https://gsi-cyberjapan.github.io/optimal_bvmap/sprite/std@2x.json",
   "https://gsi-cyberjapan.github.io/optimal_bvmap/sprite/std@2x.png",
-  "https://gsi-cyberjapan.github.io/optimal_bvmap/glyphs/NotoSansJP-Regular/0-255.pbf",
-  "https://gsi-cyberjapan.github.io/optimal_bvmap/glyphs/NotoSansJP-Regular/256-511.pbf",
-  "https://gsi-cyberjapan.github.io/optimal_bvmap/glyphs/NotoSansJP-Regular/8192-8447.pbf",
-  "https://gsi-cyberjapan.github.io/optimal_bvmap/glyphs/NotoSansJP-Regular/12288-12543.pbf",
-  "https://gsi-cyberjapan.github.io/optimal_bvmap/glyphs/NotoSansJP-Regular/65280-65535.pbf",
+  "glyphs NotoSansJP-Regular 71個",
+  "glyphs NotoSerifJP-SemiBold 71個",
   "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js",
   "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
  ],
