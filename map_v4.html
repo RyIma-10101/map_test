@@ -80,6 +80,7 @@ h1{font-size:20px;margin:6px 0 2px}
   <div id="map" aria-label="地図"></div>
   <p class="err" id="err" hidden></p>
   <p class="note" id="zoom">ズーム：－（確認用）</p>
+  <p class="note" id="diag">地図ファイルを確認中…（確認用）</p>
   <div class="legend" id="legend"></div>
   <div class="info" id="info" aria-live="polite"><p>点をタップすると、ここにその園の3年分が出ます。</p></div>
 
@@ -137,7 +138,12 @@ h1{font-size:20px;margin:6px 0 2px}
   };
 
   // ---- 地図の部品 ----
-  maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile);  // 地理院のPMTiles（1ファイルの地図）を読めるようにする
+  // 地理院のPMTiles（1ファイルの地図）を読めるようにする。ファイルの見出し（入っているズームの範囲）も読む
+  var protocol = new pmtiles.Protocol();
+  maplibregl.addProtocol("pmtiles", protocol.tile);
+  var PM = new pmtiles.PMTiles(new URL("map/bunkyo.pmtiles", location.href).href);
+  protocol.add(PM);
+  var PM_ZOOM = null;  // 地図ファイルに入っているズームの範囲 {min, max}
   var map = new maplibregl.Map({
     container:"map", style:BLANK, bounds:WARD_BOX, fitBoundsOptions:{padding:8},
     localIdeographFontFamily:"'Hiragino Sans','Noto Sans JP','Noto Sans CJK JP','Yu Gothic',sans-serif",
@@ -191,7 +197,8 @@ h1{font-size:20px;margin:6px 0 2px}
       var s = st.sources[k];
       if (s.url && s.url.indexOf("pmtiles://LOCAL/") === 0) {
         s.url = s.url.replace("pmtiles://LOCAL/", LOCAL_PM);
-        s.maxzoom = 16;  // 切り出した地図はズーム16まで。それより拡大したら16の地図を引き伸ばして使う
+        // 地図ファイルに実際に入っているズームまで。それより拡大したら、その地図を引き伸ばして使う
+        if (PM_ZOOM) { s.minzoom = PM_ZOOM.min; s.maxzoom = PM_ZOOM.max; }
       } else if (s.url) s.url = absUrl(s.url, GSI_NEW_STYLE);
       if (s.tiles) s.tiles = s.tiles.map(function(t){ return absUrl(t, GSI_NEW_STYLE); });
     });
@@ -203,11 +210,28 @@ h1{font-size:20px;margin:6px 0 2px}
     });
     return st;
   }
+  // ---- 確認用：地図ファイルの中身（ズームごとに区の中心のタイルがあるか） ----
+  function setDiag(t){ document.getElementById("diag").textContent = t; }
+  function diagnose(h){
+    var lon = 139.745, lat = 35.715, zs = [12,13,14,15,16,17];
+    return Promise.all(zs.map(function(z){
+      var n = Math.pow(2, z), r = lat * Math.PI / 180;
+      var x = Math.floor((lon + 180) / 360 * n), y = Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n);
+      return PM.getZxy(z, x, y).then(function(t){ return "z" + z + ":" + (t ? Math.round(t.data.byteLength / 1024) + "KB" : "なし"); },
+                                      function(){ return "z" + z + ":読めない"; });
+    })).then(function(list){
+      setDiag("地図ファイル：ズーム" + h.minZoom + "〜" + h.maxZoom + "、タイルの種類 " + h.tileType + "、中心のタイル " + list.join(" "));
+    });
+  }
   function setBg(kind){
     document.getElementById("err").hidden = true;
     var doPale = kind === "gsinew";
     if (cache.gsinew) return map.setStyle(prepGsiNew(cache.gsinew, doPale), {diff:false});
-    fetch(GSI_NEW_STYLE, {referrerPolicy:"no-referrer"}).then(function(r){
+    PM.getHeader().then(function(h){
+      PM_ZOOM = {min:h.minZoom, max:h.maxZoom};
+      return diagnose(h);
+    }).catch(function(e){ setDiag("地図ファイルの見出しを読めません：" + e.message); })
+    .then(function(){ return fetch(GSI_NEW_STYLE, {referrerPolicy:"no-referrer"}); }).then(function(r){
       if (!r.ok) throw new Error("map/style/std.json がありません（" + r.status + "）。GitHub Actions の「地図の部品を取得」を実行してください");
       return r.json();
     }).then(function(st){
