@@ -79,6 +79,16 @@ button{font:inherit}
 .yr.n{background:var(--surface);color:var(--fg);border-color:#9aa6b5}
 .yr.e{background:#eceef1;color:#5d6b7e}
 .yr.x{background:#c8d6e8;color:#1b2533}
+.yr.plain{background:var(--accent-soft);color:var(--fg)}
+.yr .v{display:flex;justify-content:space-between;align-items:baseline;gap:4px;flex-wrap:wrap}
+.yr .v .cap{font-size:11px;opacity:.85}
+.yr .v b.small{font-size:13px}
+.yr .sub{font-size:11px}
+.boxhead{font-size:11.5px;color:var(--muted);margin:8px 0 -4px}
+details.howto{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:13px}
+details.howto summary{cursor:pointer;color:var(--accent);font-weight:600}
+details.howto dt{font-weight:700;margin-top:8px}
+details.howto dd{margin:2px 0 0;color:var(--muted)}
 .yr.none{background:transparent;color:var(--muted);border:1px dashed var(--line)}
 details.more{margin-top:8px;font-size:13px}
 details.more summary{cursor:pointer;color:var(--accent);font-weight:600}
@@ -112,7 +122,7 @@ footer{font-size:11.5px;color:var(--muted)}
   </div>
   <div class="top" id="top">
     <div class="row2" id="filters">
-      <div><p class="label">年度</p><div class="chips" id="year" role="group" aria-label="年度"></div></div>
+      <div id="yearRow"><p class="label">年度（地図の点の色と数字）</p><div class="chips" id="year" role="group" aria-label="年度"></div></div>
       <div><p class="label">クラス</p><div class="chips" id="age" role="group" aria-label="クラス"></div></div>
     </div>
     <div id="areaRow"><p class="label">エリア</p><div class="chips" id="areas" role="group" aria-label="エリア"></div></div>
@@ -135,10 +145,22 @@ footer{font-size:11.5px;color:var(--muted)}
         <input type="search" id="q" placeholder="園名で探す" aria-label="園名で探す">
         <select id="sort" aria-label="並べ替え">
           <option value="area">エリア順</option>
-          <option value="vac">選んだ年度の空きが多い順</option>
-          <option value="idx">選んだ年度の内定指数が低い順</option>
+          <option value="vac">最新年度の空きが多い順</option>
+          <option value="idx">最新年度の内定指数が低い順</option>
         </select>
       </div>
+      <div class="tools"><span class="label" style="margin:0">カードの表示</span>
+        <div class="chips modes" role="group" aria-label="カードの表示">
+          <button type="button" class="chip" data-mode="vac" aria-pressed="true">空きと定員</button>
+          <button type="button" class="chip" data-mode="idx" aria-pressed="false">内定指数</button>
+        </div></div>
+      <details class="howto"><summary>カードの見方</summary><dl>
+          <dt>空きと定員の表示</dt>
+          <dd><b>大きい数字</b>＝4月1日の空き（欠員）。<b>「→1人」</b>＝その年度の最後の募集（1月入所、前年12月1日時点）の募集人数。最新年度はまだ発表されていないので出ません。<b>その下の「定員」</b>＝4月1日の定員。</dd>
+          <dd><b>色</b>＝濃い青：空きが続いた（4月に空きがあり、1月にも募集があった）／薄い青：途中で埋まった（4月は空き、1月は募集なし）／白：4/1時点で空きなし／灰色：判定の対象外（募集停止など）／青灰：判定なし（1月の募集がまだ）。</dd>
+          <dt>内定指数の表示</dt>
+          <dd><b>大きい数字</b>＝4月入園の1次選考で内定した最も低い指数。「定員割れ」＝申込や内定が定員に満たなかった、「(1名)」＝内定が1人で非公表、「空きなし」＝募集がなかった。<b>下の数字</b>＝1次募集の人数と申込の人数（申込は1人を複数の園で数えます）。</dd>
+        </dl></details>
       <div class="tools" style="justify-content:space-between">
         <label class="toggle"><input type="checkbox" id="hitonly"> 空きが続いた年がある園だけ</label>
         <span class="count" id="count"></span>
@@ -150,6 +172,18 @@ footer{font-size:11.5px;color:var(--muted)}
   <!-- 比較（お気に入り） -->
   <section class="view" id="v-fav" aria-label="比較" hidden>
     <div style="display:grid;gap:8px">
+      <div class="tools"><span class="label" style="margin:0">カードの表示</span>
+        <div class="chips modes" role="group" aria-label="カードの表示">
+          <button type="button" class="chip" data-mode="vac" aria-pressed="true">空きと定員</button>
+          <button type="button" class="chip" data-mode="idx" aria-pressed="false">内定指数</button>
+        </div></div>
+      <details class="howto"><summary>カードの見方</summary><dl>
+          <dt>空きと定員の表示</dt>
+          <dd><b>大きい数字</b>＝4月1日の空き（欠員）。<b>「→1人」</b>＝その年度の最後の募集（1月入所、前年12月1日時点）の募集人数。最新年度はまだ発表されていないので出ません。<b>その下の「定員」</b>＝4月1日の定員。</dd>
+          <dd><b>色</b>＝濃い青：空きが続いた（4月に空きがあり、1月にも募集があった）／薄い青：途中で埋まった（4月は空き、1月は募集なし）／白：4/1時点で空きなし／灰色：判定の対象外（募集停止など）／青灰：判定なし（1月の募集がまだ）。</dd>
+          <dt>内定指数の表示</dt>
+          <dd><b>大きい数字</b>＝4月入園の1次選考で内定した最も低い指数。「定員割れ」＝申込や内定が定員に満たなかった、「(1名)」＝内定が1人で非公表、「空きなし」＝募集がなかった。<b>下の数字</b>＝1次募集の人数と申込の人数（申込は1人を複数の園で数えます）。</dd>
+        </dl></details>
       <p class="note">★を付けた園だけを並べます。★はこの端末のブラウザにだけ保存され、ほかの端末とは共有されません。履歴を消すと消えることがあります。</p>
       <div class="cards" id="favCards"></div>
       <div id="favClear"></div>
@@ -188,7 +222,7 @@ footer{font-size:11.5px;color:var(--muted)}
   var SHORT = {h:"空きが続いた", f:"途中で埋まった", n:"4/1空きなし", e:"対象外", x:"判定なし"};  // 表の中の短い表記
   var ITEMS = ["1次募集","申込","内定指数","定員(4/1)","欠員(4/1)","待機(4/1)","1月の募集","判定"];
   var MAP_AGES = 3;  // 地図・一覧で選べるのは0〜2歳児クラス（詳細では0〜5歳）
-  var state = {year: LAST - 1 >= 0 ? LAST - 1 : 0, age:0, area:null, sel:-1, tab:"map", q:"", sort:"area", hit:false};
+  var state = {year: LAST, age:0, area:null, sel:-1, tab:"map", q:"", sort:"area", hit:false, mode:"vac"};
   if (D.dummy) document.getElementById("eyebrow").textContent = "試作（園の名前・位置は実際、数字はすべてダミー）";
 
   // ---- 小さな道具 ----
@@ -209,6 +243,7 @@ footer{font-size:11.5px;color:var(--muted)}
     var i = fav.indexOf(s.n); if (i >= 0) fav.splice(i, 1); else fav.push(s.n);
     try { localStorage.setItem(FKEY, JSON.stringify(fav)); } catch(e){}
     document.getElementById("favTab").textContent = "比較 ★" + (fav.length ? fav.length : "");
+    if (map && map.getSource && map.getSource("ov-sites")) map.getSource("ov-sites").setData(sitesGeo());
     document.querySelectorAll(".star[data-n]").forEach(function(b){ if (b.dataset.n === s.n) b.setAttribute("aria-pressed", String(isFav(s))); });
     if (state.tab === "fav") renderFav();
   }
@@ -257,15 +292,31 @@ footer{font-size:11.5px;color:var(--muted)}
   }
 
   // ---- 3年分の小さな箱（一覧・比較・地図の情報欄で共通） ----
-  function yearBoxes(s, a){
+  // mark：選んでいる年度に枠を付けるか（地図の情報欄だけ）／mode：vac＝空きと定員、idx＝内定指数
+  function yearBoxes(s, a, mark, mode){
     var g = el("div", "years");
     Y.forEach(function(y, i){
-      var c = cell(s, i, a), b = el("div", "yr " + (c ? c[7] : "none") + (i === state.year ? " cur" : ""));
+      var c = cell(s, i, a);
+      var cls = !c ? "none" : (mode === "idx" ? "plain" : c[7]);
+      var b = el("div", "yr " + cls + (mark && i === state.year ? " cur" : ""));
       b.appendChild(el("div", "y", y + "年度"));
       var v = el("div", "v");
-      if (c) { v.appendChild(el("b", null, c[4])); v.appendChild(document.createTextNode("人" + (i < LAST ? "　1月 " + show(c[6]) : ""))); }
-      else v.textContent = "－";
-      b.appendChild(v); b.appendChild(el("div", "j", c ? (c[7] === "x" && i === LAST ? "判定なし" : DOT[c[7]].label) : "クラスなし"));
+      if (!c) v.textContent = "－";
+      else if (mode === "idx") {
+        var t = typeof c[2] === "number" ? c[2] : show(c[2]);
+        v.appendChild(el("b", typeof c[2] === "number" ? null : "small", t));
+        b.appendChild(v);
+        b.appendChild(el("div", "sub", "募集" + show(c[0]) + "・申込" + show(c[1])));
+        g.appendChild(b); return;
+      } else {
+        var left = el("span");
+        left.appendChild(el("b", null, c[4])); left.appendChild(document.createTextNode("人"));
+        if (i < LAST) left.appendChild(document.createTextNode("→" + show(c[6]) + (typeof c[6] === "number" ? "人" : "")));
+        v.appendChild(left);
+      }
+      b.appendChild(v);
+      if (c) b.appendChild(el("div", "sub", "定員" + show(c[3])));  // 定員は1行に分けて、どの年度も同じ位置に
+      b.appendChild(el("div", "j", !c ? "クラスなし" : (c[7] === "x" && i === LAST ? "判定なし" : DOT[c[7]].label)));
       g.appendChild(b);
     });
     return g;
@@ -302,7 +353,8 @@ footer{font-size:11.5px;color:var(--muted)}
     left.appendChild(el("h2", null, s.n));
     left.appendChild(el("p", "muted", short(s.a) + "　" + s.t + (s.lat === null ? "　（地図には表示していません）" : "")));
     head.appendChild(left); head.appendChild(starBtn(s)); c.appendChild(head);
-    c.appendChild(yearBoxes(s, a));
+    c.appendChild(el("p", "boxhead", state.mode === "idx" ? "内定指数（下は1次募集・申込の人数）" : "空き（4月→1月）と定員"));
+    c.appendChild(yearBoxes(s, a, false, state.mode));
     var det = el("details", "more"); det.appendChild(el("summary", null, "くわしく（" + D.ages[a] + "児クラスの3年分）"));
     det.addEventListener("toggle", function(){ if (det.open && !det.dataset.done){ det.dataset.done = "1"; det.appendChild(ageTable(s, a)); det.appendChild(actions(s)); } });
     c.appendChild(det);
@@ -310,13 +362,21 @@ footer{font-size:11.5px;color:var(--muted)}
   }
 
   // ---- 一覧 ----
+  document.querySelector('#sort option[value="vac"]').textContent = Y[LAST] + "年度の空きが多い順";
+  document.querySelector('#sort option[value="idx"]').textContent = Y[LAST] + "年度の内定指数が低い順";
   var q = document.getElementById("q"), sortSel = document.getElementById("sort"), hitonly = document.getElementById("hitonly");
   q.addEventListener("input", function(){ state.q = norm(this.value.trim()); renderList(); });
   sortSel.addEventListener("change", function(){ state.sort = this.value; renderList(); });
   hitonly.addEventListener("change", function(){ state.hit = this.checked; renderList(); });
+  document.querySelectorAll(".modes").forEach(function(box){
+    box.addEventListener("click", function(ev){ var b = ev.target.closest("button"); if (!b) return;
+      state.mode = b.dataset.mode;
+      document.querySelectorAll(".modes button").forEach(function(x){ x.setAttribute("aria-pressed", String(x.dataset.mode === state.mode)); });
+      if (state.tab === "list") renderList(); if (state.tab === "fav") renderFav(); });
+  });
   function idxNum(c){ if (!c) return 999; if (typeof c[2] === "number") return c[2]; return c[2] === "定員割れ" ? -1 : 998; }
   function renderList(){
-    var a = state.age, y = state.year;
+    var a = state.age, y = LAST;  // 並べ替えは最新年度で
     var rows = D.sites.filter(function(s){
       if (!s.d.some(function(yr){ return yr[a]; })) return false;  // 3年ともその年齢のクラスがない
       if (state.area && s.a !== state.area) return false;
@@ -354,6 +414,17 @@ footer{font-size:11.5px;color:var(--muted)}
   }
 
   // ---- 園の詳細（0〜5歳×3年×全項目） ----
+  function rangeOf(s, i){
+    var ages = []; D.ages.forEach(function(_, a){ if (cell(s, i, a)) ages.push(a); });
+    if (!ages.length) return "";
+    var cont = ages[ages.length - 1] - ages[0] + 1 === ages.length;
+    return cont ? (ages.length === 1 ? ages[0] + "歳児" : ages[0] + "〜" + ages[ages.length - 1] + "歳児") : ages.join("・") + "歳児";
+  }
+  function classRange(s){  // 例「クラス：0〜5歳児」。年度で違えば補足
+    var now = rangeOf(s, LAST), extra = [];
+    Y.forEach(function(y, i){ var r = rangeOf(s, i); if (i < LAST && r !== now) extra.push(y + "年度は" + (r || "資料なし")); });
+    return "クラス：" + (now || "－") + "（" + Y[LAST] + "年度）" + (extra.length ? "　※" + extra.join("、") : "");
+  }
   var backTo = "list";
   function renderDetail(i){
     var s = D.sites[i], box = document.getElementById("detail"); box.replaceChildren();
@@ -361,6 +432,7 @@ footer{font-size:11.5px;color:var(--muted)}
     var head = el("div", "head"), left = el("div");
     left.appendChild(el("h2", null, s.n));
     left.appendChild(el("p", "muted", short(s.a) + "　" + s.t + (s.addr ? "　文京区" + s.addr : "")));
+    left.appendChild(el("p", "muted", classRange(s)));
     head.appendChild(left); head.appendChild(starBtn(s)); box.appendChild(head);
     var acts = el("div", "actions"), back = el("button", "btn", "← 戻る"); back.type = "button";
     back.addEventListener("click", function(){ location.hash = "#" + backTo; });
@@ -385,6 +457,7 @@ footer{font-size:11.5px;color:var(--muted)}
     ["map","list","fav","detail"].forEach(function(t){ document.getElementById("v-" + t).hidden = t !== tab; });
     document.querySelectorAll(".tabs a").forEach(function(a){ if (a.dataset.tab === tab) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
     document.getElementById("filters").hidden = tab === "detail";
+    document.getElementById("yearRow").hidden = tab !== "map";  // 一覧・比較は3年分を並べるので年度の選択は不要
     document.getElementById("areaRow").hidden = tab !== "map" && tab !== "list";
     if (tab === "map") { initMap(); if (map) map.resize(); showInfo(); }
     if (tab === "list") renderList();
@@ -419,7 +492,7 @@ footer{font-size:11.5px;color:var(--muted)}
       var p = {idx:i, area:s.a};
       Y.forEach(function(_, y){ for (var a = 0; a < MAP_AGES; a++){
         var c = cell(s, y, a);
-        p["k"+y+a] = c ? c[7] + "-" + Math.min(c[4], 99) : "";   // 点の画像の名前（判定-人数）。クラスなしは点を出さない
+        p["k"+y+a] = c ? c[7] + "-" + Math.min(c[4], 99) + (isFav(s) ? "-s" : "") : "";  // 点の画像の名前（判定-人数、★は-s）。クラスなしは点を出さない
         p["r"+y+a] = c ? c[4] : -1;                              // 重ね順（空きの多い点を上に）
       }});
       return {type:"Feature", properties:p, geometry:{type:"Point", coordinates:[s.lon, s.lat]}};
@@ -440,8 +513,9 @@ footer{font-size:11.5px;color:var(--muted)}
       showErr("地図の読み込みで問題がありました：" + (u ? decodeURIComponent(u.replace(location.origin, "")) + "（" + (e.error.status || "") + "）" : ((e && e.error && e.error.message) || "不明")));
     });
     map.on("styleimagemissing", function(e){
-      var mm = /^([hfnxe])-(\d+)$/.exec(e.id); if (!mm || map.hasImage(e.id)) return;
+      var mm = /^([hfnxe])-(\d+)(-s)?$/.exec(e.id); if (!mm || map.hasImage(e.id)) return;
       var d = DOT[mm[1]], n = mm[2], S = 30, c = document.createElement("canvas");
+      if (mm[3]) d = {fill:d.fill, text:d.text, line:"#f2b705", w:5};  // ★の園：黄色の太い縁
       c.width = c.height = S * DPR;
       var g = c.getContext("2d"); g.scale(DPR, DPR);
       g.beginPath(); g.arc(S/2, S/2, S/2 - d.w/2 - 1, 0, Math.PI*2);
@@ -546,7 +620,8 @@ footer{font-size:11.5px;color:var(--muted)}
     left.appendChild(el("h2", null, s.n));
     left.appendChild(el("p", "muted", short(s.a) + "　" + s.t + "　" + D.ages[state.age] + "児クラス"));
     head.appendChild(left); head.appendChild(starBtn(s)); info.appendChild(head);
-    info.appendChild(yearBoxes(s, state.age));
+    info.appendChild(el("p", "boxhead", "空き（4月→1月）と定員"));
+    info.appendChild(yearBoxes(s, state.age, true, "vac"));
     var det = el("details", "more"); det.appendChild(el("summary", null, "くわしく（" + D.ages[state.age] + "児クラスの3年分）"));
     det.addEventListener("toggle", function(){ if (det.open && !det.dataset.done){ det.dataset.done = "1"; det.appendChild(ageTable(s, state.age)); } });
     info.appendChild(det);
@@ -561,6 +636,9 @@ footer{font-size:11.5px;color:var(--muted)}
       if (d.line === "#ffffff") b.style.boxShadow = "0 0 0 1px #c4ccd6";
       s.appendChild(b); s.appendChild(document.createTextNode(k === "x" ? "判定なし（1月の募集はまだ）" : d.label)); box.appendChild(s);
     });
+    var fs = el("span"), fb = el("b", null, "3");
+    fb.style.background = "#ffffff"; fb.style.color = "#5d6b7e"; fb.style.border = "4px solid #f2b705";
+    fs.appendChild(fb); fs.appendChild(document.createTextNode("★を付けた園")); box.appendChild(fs);
     box.appendChild(el("span", null, "数字＝4月1日の空き"));
   }
 
