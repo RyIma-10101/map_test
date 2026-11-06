@@ -80,6 +80,11 @@ h1{font-size:20px;margin:6px 0 2px}
   <div id="map" aria-label="地図"></div>
   <p class="err" id="err" hidden></p>
   <p class="note" id="zoom">ズーム：－（確認用）</p>
+  <div><p class="label">確認用：地図の区画の扱い</p>
+    <div class="chips" id="ts" role="group" aria-label="区画の扱い">
+      <button type="button" class="chip" data-ts="512" aria-pressed="true">A（標準・512）</button>
+      <button type="button" class="chip" data-ts="256" aria-pressed="false">B（256）</button>
+    </div></div>
   <div class="legend" id="legend"></div>
   <div class="info" id="info" aria-live="polite"><p>点をタップすると、ここにその園の3年分が出ます。</p></div>
 
@@ -107,7 +112,7 @@ h1{font-size:20px;margin:6px 0 2px}
   var LOCAL_TILES = new URL("map/tiles/", location.href).href;            // 自前に置いた地図（区画ごとのファイル）の場所
   var MAX_BOUNDS = [[139.695, 35.685], [139.795, 35.750]];                   // 切り出した範囲の外へは動かせない
   var BLANK = {version:8, sources:{}, layers:[{id:"bg", type:"background", paint:{"background-color":"#f4f5f2"}}]};
-  var state = {bg:"gsinew", lv:"faint", year:1, age:0, area:null, sel:-1};
+  var state = {ts:512, bg:"gsinew", lv:"faint", year:1, age:0, area:null, sel:-1};
 
   function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=String(text); return e; }
   function short(a){ return a.replace(/駅周辺$/,"").replace(/駅・/,"・"); }
@@ -191,7 +196,11 @@ h1{font-size:20px;margin:6px 0 2px}
       var s = st.sources[k];
       // 自前の地図（LOCAL_TILES/…）はページの場所から見たURLに。ほかの設定は元のまま
       if (s.url) s.url = absUrl(s.url, GSI_NEW_STYLE);
-      if (s.tiles) s.tiles = s.tiles.map(function(t){ return t.indexOf("LOCAL_TILES/") === 0 ? LOCAL_TILES + t.slice("LOCAL_TILES/".length) : absUrl(t, GSI_NEW_STYLE); });
+      if (s.tiles && s.tiles[0].indexOf("LOCAL_TILES/") === 0) {
+        s.tiles = s.tiles.map(function(t){ return LOCAL_TILES + t.slice("LOCAL_TILES/".length); });
+        // 確認用：区画を何ピクセルとして扱うか（512＝MapLibreの標準、256＝地理院の画像の地図と同じ）
+        if (state.ts === 256) s.tileSize = 256; else delete s.tileSize;
+      } else if (s.tiles) s.tiles = s.tiles.map(function(t){ return absUrl(t, GSI_NEW_STYLE); });
     });
     if (doPale) (st.layers || []).forEach(function(l){
       if (!l.paint || l.type === "symbol") return;
@@ -344,6 +353,10 @@ h1{font-size:20px;margin:6px 0 2px}
     showInfo();
   });
 
+  document.getElementById("ts").addEventListener("click", function(ev){
+    var b = ev.target.closest("button"); if (!b) return;
+    pressOnly(this, b); state.ts = Number(b.dataset.ts); setBg(state.bg);
+  });
   drawLegend();
   setBg(state.bg);
 })();
