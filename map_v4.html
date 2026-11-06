@@ -79,6 +79,7 @@ h1{font-size:20px;margin:6px 0 2px}
 
   <div id="map" aria-label="地図"></div>
   <p class="err" id="err" hidden></p>
+  <p class="note" id="zoom">ズーム：－（確認用）</p>
   <div class="legend" id="legend"></div>
   <div class="info" id="info" aria-live="polite"><p>点をタップすると、ここにその園の3年分が出ます。</p></div>
 
@@ -144,6 +145,7 @@ h1{font-size:20px;margin:6px 0 2px}
     attributionControl:{compact:true}
   });
   map.touchZoomRotate.disableRotation();
+  map.on("zoomend", function(){ document.getElementById("zoom").textContent = "ズーム：" + map.getZoom().toFixed(1) + "（確認用）"; });
   map.on("error", function(e){ showErr("地図の読み込みで問題がありました：" + ((e && e.error && e.error.message) || "不明")); });
 
   // 点の画像は、必要になったときにその場で描く（例 "h-3" ＝空きが続いた・3人）
@@ -187,7 +189,10 @@ h1{font-size:20px;margin:6px 0 2px}
     if (st.glyphs) st.glyphs = absUrl(st.glyphs, GSI_NEW_STYLE);
     Object.keys(st.sources || {}).forEach(function(k){
       var s = st.sources[k];
-      if (s.url) s.url = s.url.indexOf("pmtiles://LOCAL/") === 0 ? s.url.replace("pmtiles://LOCAL/", LOCAL_PM) : absUrl(s.url, GSI_NEW_STYLE);
+      if (s.url && s.url.indexOf("pmtiles://LOCAL/") === 0) {
+        s.url = s.url.replace("pmtiles://LOCAL/", LOCAL_PM);
+        s.maxzoom = 16;  // 切り出した地図はズーム16まで。それより拡大したら16の地図を引き伸ばして使う
+      } else if (s.url) s.url = absUrl(s.url, GSI_NEW_STYLE);
       if (s.tiles) s.tiles = s.tiles.map(function(t){ return absUrl(t, GSI_NEW_STYLE); });
     });
     if (doPale) (st.layers || []).forEach(function(l){
