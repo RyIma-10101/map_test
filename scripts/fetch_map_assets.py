@@ -75,6 +75,7 @@ def main(out):
         where = json.dumps(src)
         if "optimal_bvmap" in where and src.get("type") == "vector":
             keep = {x: src[x] for x in ("attribution", "minzoom") if x in src}
+            keep["maxzoom"] = 16  # 切り出したズームの上限（これより拡大したら16を引き伸ばす）
             style["sources"][k] = {"type": "vector", "url": "pmtiles://LOCAL/bunkyo.pmtiles", **keep}
             print(f"地図データの場所を自前に変更：{k}")
         else:
