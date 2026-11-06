@@ -9,9 +9,15 @@
    "minzoom": 4,
    "maxzoom": 16,
    "tiles": [
-    "pmtiles://LOCAL/bunkyo.pmtiles/{z}/{x}/{y}"
+    "LOCAL_TILES/{z}/{x}/{y}.pbf"
    ],
-   "attribution": "国土地理院最適化ベクトルタイル(標準地図風スタイル)"
+   "attribution": "国土地理院最適化ベクトルタイル(標準地図風スタイル)",
+   "bounds": [
+    139.695,
+    35.685,
+    139.795,
+    35.75
+   ]
   }
  },
  "layers": [
