@@ -7,7 +7,7 @@
   map/lib/             … MapLibre GL の部品（版を固定）
   map/取得記録.json     … いつ・どこから取得したか
 """
-import json, os, sys, urllib.parse, urllib.request
+import json, os, sys, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
 STYLE_URL = "https://gsi-cyberjapan.github.io/optimal_bvmap/style/std.json"
@@ -15,8 +15,11 @@ LIBS = {
     "maplibre-gl.js": "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js",
     "maplibre-gl.css": "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css",
 }
-# 文字の形の範囲：基本の英数字、ラテン文字の追加、一般の記号、和文の記号（「」・々など）、全角英数字
-GLYPH_RANGES = ["0-255", "256-511", "8192-8447", "12288-12543", "65280-65535"]
+# 文字の形の範囲：漢字・ハングル・私用領域など（端末のフォントで描く／使わない）を除く、すべての範囲。
+# 足りない範囲があると、その文字を含む区画の地図が丸ごと表示されなくなるため、多めに取る（ない範囲は飛ばす）
+SKIP = [(13312, 40959), (44032, 55295), (55296, 63743)]  # 漢字（拡張A含む）、ハングル、サロゲート・私用領域
+GLYPH_RANGES = [f"{a}-{a + 255}" for a in range(0, 65536, 256)
+                if not any(lo <= a and a + 255 <= hi for lo, hi in SKIP)]
 UA = {"User-Agent": "map-asset-fetch/1.0 (static site build)"}
 
 def get(url):
@@ -31,11 +34,17 @@ def save(path, data):
     print(f"保存 {path}（{len(data):,} バイト）")
 
 def font_stacks(style):
+    """text-font に出てくる書体の組をすべて集める（式の中に書かれたものも探す）"""
     stacks = set()
+    def walk(v):
+        if isinstance(v, list):
+            # 書体名は「NotoSansJP-Regular」のように大文字・ハイフン・空白を含む（式の命令名 zoom, get などは小文字の1語）
+            if v and all(isinstance(x, str) and (x != x.lower() or "-" in x or " " in x) for x in v):
+                stacks.add(",".join(v))
+            else:
+                for x in v: walk(x)
     for l in style.get("layers", []):
-        tf = (l.get("layout") or {}).get("text-font")
-        if isinstance(tf, list) and tf and all(isinstance(x, str) for x in tf):
-            stacks.add(",".join(tf))
+        walk((l.get("layout") or {}).get("text-font"))
     return sorted(stacks)
 
 def main(out):
@@ -60,13 +69,22 @@ def main(out):
     glyphs = style.get("glyphs")
     if glyphs:
         tmpl = urllib.parse.urljoin(STYLE_URL, glyphs).replace("%7B", "{").replace("%7D", "}")
-        for fs in font_stacks(style):
+        stacks = font_stacks(style)
+        print(f"書体の組：{stacks}、範囲 {len(GLYPH_RANGES)} 個ずつ")
+        for fs in stacks:
+            got = 0
             for rg in GLYPH_RANGES:
                 url = tmpl.replace("{fontstack}", urllib.parse.quote(fs)).replace("{range}", rg)
                 try:
-                    save(os.path.join(out, "glyphs", fs, rg + ".pbf"), get(url)); log["取得したもの"].append(url)
-                except Exception as e:
-                    print(f"取得できず {url}: {e}"); log["取得できなかったもの"].append(url)
+                    data = get(url)
+                except urllib.error.HTTPError as e:
+                    if e.code == 404: continue  # その範囲の文字がない（正常）
+                    print(f"取得できず {url}: {e}"); log["取得できなかったもの"].append(url); continue
+                path = os.path.join(out, "glyphs", fs, rg + ".pbf")
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "wb") as f: f.write(data)
+                got += 1
+            print(f"文字の形 {fs}：{got} 個保存"); log["取得したもの"].append(f"glyphs {fs} {got}個")
         style["glyphs"] = "../glyphs/{fontstack}/{range}.pbf"
 
     # 地図データの場所：地理院のPMTilesを、区画ごとに分けた map/tiles に向ける
