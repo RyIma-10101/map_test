@@ -6,9 +6,12 @@
  "sources": {
   "v": {
    "type": "vector",
-   "url": "pmtiles://LOCAL/bunkyo.pmtiles",
-   "attribution": "国土地理院最適化ベクトルタイル(標準地図風スタイル)",
-   "minzoom": 4
+   "minzoom": 4,
+   "maxzoom": 16,
+   "tiles": [
+    "pmtiles://LOCAL/bunkyo.pmtiles/{z}/{x}/{y}"
+   ],
+   "attribution": "国土地理院最適化ベクトルタイル(標準地図風スタイル)"
   }
  },
  "layers": [
