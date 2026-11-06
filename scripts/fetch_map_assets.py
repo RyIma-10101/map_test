@@ -74,10 +74,14 @@ def main(out):
     for k, src in style.get("sources", {}).items():
         where = json.dumps(src)
         if "optimal_bvmap" in where and src.get("type") == "vector":
-            keep = {x: src[x] for x in ("attribution", "minzoom") if x in src}
-            keep["maxzoom"] = 16  # 切り出したズームの上限（これより拡大したら16を引き伸ばす）
-            style["sources"][k] = {"type": "vector", "url": "pmtiles://LOCAL/bunkyo.pmtiles", **keep}
-            print(f"地図データの場所を自前に変更：{k}")
+            # 場所（url / tiles）だけ自前に替え、ほかの設定（tileSize・ズームの範囲など）は元のまま残す
+            new = dict(src)
+            if "url" in new:
+                new["url"] = "pmtiles://LOCAL/bunkyo.pmtiles"
+            if "tiles" in new:
+                new["tiles"] = ["pmtiles://LOCAL/bunkyo.pmtiles/{z}/{x}/{y}"]
+            style["sources"][k] = new
+            print(f"地図データの場所を自前に変更：{k}（元の設定 {where[:300]}）")
         else:
             print(f"注意：自前にしていない地図データ {k}: {where[:200]}")
             log["取得できなかったもの"].append(f"source {k}（外部のまま）")
